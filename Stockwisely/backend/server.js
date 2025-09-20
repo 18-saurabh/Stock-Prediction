@@ -10,16 +10,22 @@ const { exec } = require('child_process');
 const path = require('path');
 const yahooFinance = require('yahoo-finance2').default;
 const axios = require('axios');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000;
+
+// Initialize Gemini AI
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
 .then(() => console.log("✅ MongoDB connected successfully"))
-.catch(err => console.error("❌ MongoDB connection error:", err));
+.catch(err => console.error("❌ MongoDB connection error:", err));
 
 
 const userSchema = new mongoose.Schema({
@@ -42,6 +48,61 @@ const User = mongoose.model('User', userSchema);
 app.use(cors());
 app.use(bodyParser.json());
 app.use('/graphs', express.static(path.join(__dirname, 'graphs')));
+
+// Chatbot Route - Stateless Gemini API Integration
+app.post('/api/chatbot', async (req, res) => {
+  const { message, context } = req.body;
+
+  if (!message) {
+    return res.status(400).json({ error: 'Message is required' });
+  }
+
+  try {
+    // Create context-aware prompt for StockWisely
+    const systemPrompt = `You are StockWisely AI Assistant, a helpful chatbot for a stock prediction application called "StockWisely". 
+
+About StockWisely:
+- AI-powered stock price prediction platform using Support Vector Machine (SVM) and Artificial Neural Networks (ANN)
+- Built with MERN stack (MongoDB, Express, React, Node.js)
+- Features: Stock price predictions, watchlist management, news sentiment analysis, real-time stock tracking
+- Uses Yahoo Finance API for stock data and Polygon.io for news
+- Prediction accuracy varies but typically ranges from 70-85%
+- Free to use with user registration required
+- Supports major stock tickers (AAPL, GOOGL, TSLA, etc.)
+
+Key Features:
+1. Stock Price Prediction: Enter ticker symbol and future date to get AI predictions
+2. Watchlist: Track favorite stocks with real-time price updates and charts
+3. News & Sentiment: Get latest stock news with AI sentiment analysis
+4. User Profile: Manage account settings and view prediction history
+
+How to use:
+1. Sign up/Login on the landing page
+2. Navigate to Home to make stock predictions
+3. Use Watchlist to track multiple stocks
+4. Check News section for market updates and sentiment analysis
+5. Manage your profile and settings in Profile section
+
+Answer user questions about StockWisely's functionality, features, and usage. Be helpful, concise, and accurate.`;
+
+    const fullPrompt = `${systemPrompt}\n\nUser Question: ${message}`;
+
+    const result = await model.generateContent(fullPrompt);
+    const response = await result.response;
+    const text = response.text();
+
+    res.json({ 
+      response: text,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error with Gemini API:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate response. Please try again.',
+      fallback: "I'm having trouble connecting right now. For help with StockWisely, you can: 1) Use the Home page to make stock predictions, 2) Add stocks to your Watchlist, 3) Check the News section for market updates, or 4) Visit your Profile to manage settings."
+    });
+  }
+});
 
 // Routes
 

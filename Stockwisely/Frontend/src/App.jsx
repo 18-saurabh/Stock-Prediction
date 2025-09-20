@@ -13,6 +13,7 @@ import Watchlist from './components/Watchlist';
 import Profile from './components/Profile';
 import News from './pages/News';
 import SentimentAnalysis from './pages/SentimentAnalysis'; // Import Sentiment Analysis Component
+import Chatbot from './components/Chatbot';
 
 const App = () => {
   useEffect(() => {
@@ -31,6 +32,7 @@ const App = () => {
 
   return (
     <BrowserRouter>
+      <Chatbot />
       <Routes>
         <Route path="/" element={<ImmersiveParallax />} />
         <Route path="/landing" element={<LandingPage />} />
