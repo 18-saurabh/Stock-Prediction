@@ -504,3 +504,130 @@ app.get('/watchlist/:email', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
+// Profile Routes
+
+// Get User Profile
+app.get('/api/user/profile/:email', async (req, res) => {
+  const { email } = req.params;
+  
+  try {
+    const user = await User.findOne({ email }).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    res.json({
+      username: user.username,
+      email: user.email,
+      joinDate: user.createdAt || new Date(),
+      watchlist: user.watchlist || []
+    });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update User Profile
+app.put('/api/user/profile', async (req, res) => {
+  const { email, username, newEmail } = req.body;
+  const token = req.headers.authorization && req.headers.authorization.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'No token provided' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, 'secretkey');
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (username) user.username = username;
+    if (newEmail) user.email = newEmail;
+    
+    await user.save();
+    res.json({ message: 'Profile updated successfully' });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get Prediction History (Mock data for now)
+app.get('/api/user/predictions/:email', async (req, res) => {
+  const { email } = req.params;
+  
+  try {
+    // Mock prediction history data
+    const predictions = [
+      {
+        id: 1,
+        ticker: 'AAPL',
+        predictionDate: '2024-01-15',
+        predictedPrice: 185.50,
+        actualPrice: 182.30,
+        accuracy: 82.5,
+        success: true,
+        createdAt: '2024-01-10'
+      },
+      {
+        id: 2,
+        ticker: 'TSLA',
+        predictionDate: '2024-01-20',
+        predictedPrice: 245.00,
+        actualPrice: 238.90,
+        accuracy: 87.2,
+        success: true,
+        createdAt: '2024-01-12'
+      },
+      {
+        id: 3,
+        ticker: 'GOOGL',
+        predictionDate: '2024-01-25',
+        predictedPrice: 142.80,
+        actualPrice: 139.20,
+        accuracy: 75.3,
+        success: true,
+        createdAt: '2024-01-18'
+      }
+    ];
+    
+    res.json({ predictions });
+  } catch (error) {
+    console.error('Error fetching predictions:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get User Activity Stats
+app.get('/api/user/activity/:email', async (req, res) => {
+  const { email } = req.params;
+  
+  try {
+    // Mock activity data
+    const activity = {
+      totalPredictions: 15,
+      successfulPredictions: 12,
+      newsSearches: 45,
+      watchlistItems: 8,
+      avgAccuracy: 79.8,
+      lastActive: new Date(),
+      portfolioPerformance: [
+        { date: '2024-01-01', value: 1000 },
+        { date: '2024-01-05', value: 1050 },
+        { date: '2024-01-10', value: 1120 },
+        { date: '2024-01-15', value: 1080 },
+        { date: '2024-01-20', value: 1200 },
+        { date: '2024-01-25', value: 1350 }
+      ]
+    };
+    
+    res.json(activity);
+  } catch (error) {
+    console.error('Error fetching activity:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});

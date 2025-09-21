@@ -11,6 +11,24 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  username: {
+    type: String,
+    required: true,
+  },
+  watchlist: [
+    {
+      ticker: String,
+      companyName: String,
+      prices: [Number], 
+      dates: [String],
+    },
+  ],
+  preferences: {
+    darkMode: { type: Boolean, default: false },
+    notifications: { type: Boolean, default: true }
+  }
+}, {
+  timestamps: true
 });
 
 // Hash password before saving
