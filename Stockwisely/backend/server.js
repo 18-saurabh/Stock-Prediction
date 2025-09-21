@@ -195,6 +195,52 @@ app.get('/api/live-news', async (req, res) => {
   }
 });
 
+// Finnhub API integration for ticker-specific news
+app.get('/api/ticker-news/:ticker', async (req, res) => {
+  const { ticker } = req.params;
+  const finnhubApiKey = process.env.FINNHUB_API_KEY;
+  
+  if (!finnhubApiKey) {
+    return res.status(500).json({ message: 'Finnhub API key not configured' });
+  }
+
+  if (!ticker) {
+    return res.status(400).json({ message: 'Ticker symbol is required' });
+  }
+
+  try {
+    // Get current date and 30 days ago for news range
+    const toDate = new Date().toISOString().split('T')[0];
+    const fromDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    const response = await axios.get(
+      `https://finnhub.io/api/v1/company-news?symbol=${ticker}&from=${fromDate}&to=${toDate}&token=${finnhubApiKey}`
+    );
+    
+    if (response.data && response.data.length > 0) {
+      const tickerNews = response.data
+        .filter(article => article.headline && article.summary)
+        .slice(0, 10)
+        .map(article => ({
+          id: article.id,
+          headline: article.headline,
+          summary: article.summary,
+          url: article.url,
+          image: article.image,
+          datetime: article.datetime,
+          source: article.source,
+          category: article.category || 'company'
+        }));
+
+      res.json({ news: tickerNews, ticker: ticker.toUpperCase() });
+    } else {
+      res.json({ news: [], message: `No recent news found for ${ticker.toUpperCase()}`, ticker: ticker.toUpperCase() });
+    }
+  } catch (error) {
+    console.error('Error fetching ticker news from Finnhub:', error);
+    res.status(500).json({ message: 'Failed to fetch ticker news' });
+  }
+});
 let newsHistory = {};
 app.get('/api/news', async (req, res) => {
   const { ticker } = req.query;

@@ -7,9 +7,13 @@ const News = () => {
   const [ticker, setTicker] = useState('');
   const [news, setNews] = useState([]);
   const [liveNews, setLiveNews] = useState([]);
+  const [tickerNews, setTickerNews] = useState([]);
+  const [searchedTicker, setSearchedTicker] = useState('');
   const [sentimentResults, setSentimentResults] = useState({});
   const [error, setError] = useState('');
+  const [tickerError, setTickerError] = useState('');
   const [liveNewsLoading, setLiveNewsLoading] = useState(false);
+  const [tickerNewsLoading, setTickerNewsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
 
   // Auto-clear sentiment after 10 seconds
@@ -59,37 +63,28 @@ const News = () => {
 
   const fetchNews = async () => {
     if (!ticker) {
-      setError('Please enter a valid stock ticker.');
+      setTickerError('Please enter a valid stock ticker.');
       return;
     }
 
+    setTickerNewsLoading(true);
+    setTickerError('');
+    
     try {
-      const response = await axios.get(`http://localhost:5000/api/news?ticker=${ticker}`);
-      console.log('News API Response:', response.data);
+      const response = await axios.get(`http://localhost:5000/api/ticker-news/${ticker}`);
+      console.log('Ticker News API Response:', response.data);
 
-      if (response.data?.results && response.data.results.length > 0) {
-        setNews(response.data.results);
-        setSentimentResults({});
-        setError('');
-      } else {
-        setNews([]);
-        setError('No news available for this stock ticker.');
-      }
-    } catch (error) {
-      console.error('Error fetching news:', error);
-      setError('Failed to fetch news. Please try again later.');
-    }
-  };
-
-  const analyzeSentiment = async (articleIndex) => {
-    const article = news[articleIndex];
+      if (response.data && response.data.news) {
+        setTickerNews(response.data.news);
+        setSearchedTicker(response.data.ticker);
+    const article = tickerNews[articleIndex];
     if (!article) {
-      setError('No news available for sentiment analysis.');
+      setTickerError('No news available for sentiment analysis.');
       return;
     }
 
     try {
-      const response = await axios.post('http://localhost:5000/api/sentiment', { text: article.title });
+      const response = await axios.post('http://localhost:5000/api/sentiment', { text: article.headline });
       console.log('Sentiment Response:', response.data);
 
       const sentimentData = response.data?.sentiment;
@@ -112,13 +107,20 @@ const News = () => {
         setSentimentResults(prev => ({
           ...prev,
           [articleIndex]: { sentiment, confidence }
-        }));
-      } else {
-        setError('Invalid sentiment data received.');
+        setTickerError('');
+        
+        if (response.data.news.length === 0) {
+          setTickerError(response.data.message || `No recent news found for ${ticker.toUpperCase()}`);
+        }
+        setTickerNews([]);
+        setTickerError('No news available for this stock ticker.');
       }
     } catch (error) {
       console.error('Error analyzing sentiment:', error.message);
-      setError('Failed to analyze sentiment. Please try again.');
+      setTickerError('Failed to analyze sentiment. Please try again.');
+      setTickerError('Failed to fetch ticker news. Please try again later.');
+    } finally {
+      setTickerNewsLoading(false);
     }
   };
 
@@ -209,40 +211,66 @@ const News = () => {
       {/* Stock-Specific News Section */}
       <div className="w-full max-w-4xl">
         <h2 className="text-2xl font-bold text-gray-800 mb-6">Stock-Specific News & Sentiment Analysis</h2>
-      <div className="flex space-x-4">
+        <div className="flex space-x-4 mb-6">
         <input
           type="text"
           value={ticker}
           onChange={(e) => setTicker(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && fetchNews()}
           placeholder="Enter Stock Ticker (e.g., AAPL)"
           className="px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
         />
         <button 
           onClick={fetchNews} 
+          disabled={tickerNewsLoading}
           className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition"
         >
-          Get News
+          {tickerNewsLoading ? 'Loading...' : 'Get News'}
         </button>
       </div>
 
-        {error && ticker && <p className="text-red-500 mt-4">{error}</p>}
+        {tickerError && <p className="text-red-500 mb-4">{tickerError}</p>}
 
-      {news.length > 0 && (
-        <div className="mt-6 grid gap-6 max-w-4xl w-full">
-          {news.map((article, idx) => (
+        {searchedTicker && (
+          <h3 className="text-xl font-semibold text-gray-700 mb-4">
+            News for {searchedTicker} ({tickerNews.length} articles found)
+          </h3>
+        )}
+
+        {tickerNewsLoading && (
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            {[...Array(4)].map((_, idx) => (
+              <div key={idx} className="bg-white p-6 shadow-md rounded-lg animate-pulse">
+                <div className="h-4 bg-gray-300 rounded w-3/4 mb-4"></div>
+                <div className="h-3 bg-gray-300 rounded w-full mb-2"></div>
+                <div className="h-3 bg-gray-300 rounded w-2/3"></div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tickerNews.length > 0 && !tickerNewsLoading && (
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            {tickerNews.map((article, idx) => (
             <div key={idx} className="bg-white p-4 shadow-md rounded-lg">
               {article.image && (
-                <img src={article.image} alt="News" className="w-full h-48 object-cover rounded-lg mb-4" />
+                <img 
+                  src={article.image} 
+                  alt="News" 
+                  className="w-full h-48 object-cover rounded-lg mb-4"
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
               )}
-              <a href={article.url} target="_blank" rel="noopener noreferrer" className="text-xl font-semibold text-blue-500 hover:underline">
-                {article.title}
+              <a href={article.url} target="_blank" rel="noopener noreferrer" className="text-lg font-semibold text-blue-500 hover:underline block mb-3">
+                {article.headline}
               </a>
               <p className="text-gray-700 mt-2">
-                {article.description || "No description available."}
+                {article.summary || "No description available."}
               </p>
-              {article.author && (
-                <p className="text-gray-500 text-sm mt-2">By {article.author}</p>
-              )}
+              <div className="flex items-center justify-between text-xs text-gray-500 mt-3 mb-4">
+                <span>{article.source}</span>
+                <span>{new Date(article.datetime * 1000).toLocaleDateString()}</span>
+              </div>
 
               <button 
                 onClick={() => analyzeSentiment(idx)} 
@@ -260,7 +288,7 @@ const News = () => {
             </div>
           ))}
         </div>
-      )}
+        )}
       </div>
     </div>
   );
