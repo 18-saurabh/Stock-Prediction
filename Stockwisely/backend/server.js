@@ -49,15 +49,33 @@ app.use('/graphs', express.static(path.join(__dirname, 'graphs')));
 
 // Chatbot Route - Stateless Gemini API Integration
 app.post('/api/chatbot', async (req, res) => {
-  const { message, context } = req.body;
+  const { message, context, isAuthenticated, currentPage } = req.body;
 
   if (!message) {
     return res.status(400).json({ error: 'Message is required' });
   }
 
   try {
+    // Check if user is on sign-in/sign-up page and not authenticated
+    if (!isAuthenticated && (currentPage === '/landing' || currentPage === '/login' || currentPage === '/signup' || currentPage === '/')) {
+      const onboardingKeywords = ['what', 'about', 'app', 'this', 'stockwisely', 'features', 'what is', 'tell me about'];
+      const isOnboardingQuery = onboardingKeywords.some(keyword => 
+        message.toLowerCase().includes(keyword)
+      );
+      
+      if (!isOnboardingQuery) {
+        return res.json({ 
+          response: "Please sign in first to use this feature. I can help you learn about StockWisely if you'd like - just ask 'What is this app about?'",
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+
     // Create context-aware prompt for StockWisely
-    const systemPrompt = `You are StockWisely AI Assistant, a helpful chatbot for a stock prediction application called "StockWisely". 
+    const systemPrompt = `You are StockWisely AI Assistant, a helpful chatbot for a stock prediction application called "StockWisely".
+
+User Authentication Status: ${isAuthenticated ? 'Logged In' : 'Not Logged In'}
+Current Page: ${currentPage || 'Unknown'}
 
 About StockWisely:
 - AI-powered stock price prediction platform using Support Vector Machine (SVM) and Artificial Neural Networks (ANN)
@@ -81,6 +99,7 @@ How to use:
 4. Check News section for market updates and sentiment analysis
 5. Manage your profile and settings in Profile section
 
+${!isAuthenticated && (currentPage === '/landing' || currentPage === '/login' || currentPage === '/signup' || currentPage === '/') ? 'Note: User is not signed in. For non-onboarding questions, remind them to sign in first.' : ''}
 Answer user questions about StockWisely's functionality, features, and usage. Be helpful, concise, and accurate.`;
 
     const fullPrompt = `${systemPrompt}\n\nUser Question: ${message}`;
@@ -132,8 +151,51 @@ app.post('/signup', async (req, res) => {
 
   
   
-  let newsHistory = {};
+// Finnhub API integration for live stock news
+app.get('/api/live-news', async (req, res) => {
+  const finnhubApiKey = process.env.FINNHUB_API_KEY;
+  
+  if (!finnhubApiKey) {
+    return res.status(500).json({ message: 'Finnhub API key not configured' });
+  }
 
+  try {
+    const response = await axios.get(`https://finnhub.io/api/v1/news?category=general&token=${finnhubApiKey}`);
+    
+    if (response.data && response.data.length > 0) {
+      // Filter and format news for stock market relevance
+      const stockNews = response.data
+        .filter(article => 
+          article.headline && 
+          article.summary && 
+          (article.category === 'business' || 
+           article.headline.toLowerCase().includes('stock') ||
+           article.headline.toLowerCase().includes('market') ||
+           article.headline.toLowerCase().includes('trading'))
+        )
+        .slice(0, 10) // Limit to 10 articles
+        .map(article => ({
+          id: article.id,
+          headline: article.headline,
+          summary: article.summary,
+          url: article.url,
+          image: article.image,
+          datetime: article.datetime,
+          source: article.source,
+          category: article.category
+        }));
+
+      res.json({ news: stockNews });
+    } else {
+      res.json({ news: [], message: 'No news available at the moment' });
+    }
+  } catch (error) {
+    console.error('Error fetching live news from Finnhub:', error);
+    res.status(500).json({ message: 'Failed to fetch live news' });
+  }
+});
+
+let newsHistory = {};
 app.get('/api/news', async (req, res) => {
   const { ticker } = req.query;
 

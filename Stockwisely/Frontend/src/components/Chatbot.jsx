@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, Send, X, Bot, User, Minimize2, Maximize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 
 const Chatbot = () => {
@@ -18,6 +19,8 @@ const Chatbot = () => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const location = useLocation();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -27,6 +30,15 @@ const Chatbot = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = localStorage.getItem('authToken');
+      setIsAuthenticated(!!token);
+    };
+    checkAuth();
+  }, [location]);
 
   // Focus input when chat opens
   useEffect(() => {
@@ -59,7 +71,9 @@ const Chatbot = () => {
     try {
       const response = await axios.post('http://localhost:5000/api/chatbot', {
         message: inputMessage,
-        context: messages.slice(-5) // Send last 5 messages for context
+        context: messages.slice(-5), // Send last 5 messages for context
+        isAuthenticated: isAuthenticated,
+        currentPage: location.pathname
       });
 
       const botMessage = {
@@ -107,9 +121,15 @@ const Chatbot = () => {
 
   // Predefined quick questions
   const quickQuestions = [
-    "How do I make a stock prediction?",
-    "What is the prediction accuracy?",
-    "How do I add stocks to my watchlist?",
+    ...(isAuthenticated ? [
+      "How do I make a stock prediction?",
+      "What is the prediction accuracy?",
+      "How do I add stocks to my watchlist?",
+      "How does sentiment analysis work?"
+    ] : [
+      "What is this app about?",
+      "What features does StockWisely offer?"
+    ]),
     "How does sentiment analysis work?",
     "What data sources do you use?"
   ];
@@ -117,6 +137,7 @@ const Chatbot = () => {
   const handleQuickQuestion = (question) => {
     setInputMessage(question);
     sendMessage();
+    setTimeout(() => sendMessage(), 100); // Small delay to ensure state is updated
   };
 
   return (
@@ -153,7 +174,10 @@ const Chatbot = () => {
             <div className="bg-orange-500 text-white p-4 rounded-t-lg flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Bot className="h-5 w-5" />
-                <span className="font-semibold">StockWisely AI</span>
+                <span className="font-semibold">
+                  StockWisely AI
+                  {!isAuthenticated && <span className="text-xs ml-1">(Limited)</span>}
+                </span>
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
               </div>
               <div className="flex items-center space-x-2">
@@ -238,7 +262,7 @@ const Chatbot = () => {
                 {/* Quick Questions */}
                 {messages.length === 1 && (
                   <div className="px-4 py-2 border-t border-gray-200">
-                    <p className="text-xs text-gray-500 mb-2">Quick questions:</p>
+                    <p className="text-xs text-gray-500 mb-2">{isAuthenticated ? 'Quick questions:' : 'Try asking:'}</p>
                     <div className="flex flex-wrap gap-1">
                       {quickQuestions.slice(0, 3).map((question, index) => (
                         <button
@@ -262,7 +286,11 @@ const Chatbot = () => {
                       value={inputMessage}
                       onChange={(e) => setInputMessage(e.target.value)}
                       onKeyPress={handleKeyPress}
-                      placeholder="Ask me anything about StockWisely..."
+                      placeholder={
+                        isAuthenticated 
+                          ? "Ask me anything about StockWisely..." 
+                          : "Ask about StockWisely features..."
+                      }
                       className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                       disabled={isLoading}
                     />
