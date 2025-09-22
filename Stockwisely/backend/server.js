@@ -402,7 +402,7 @@ app.get('/api/stocks/:ticker', async (req, res) => {
 
 // Prediction Route (using a Python script or model)
 app.post('/predict', (req, res) => {
-  const { ticker, predictionDate } = req.body;
+  const { ticker, predictionDate, userEmail } = req.body;
 
   if (!ticker || !predictionDate) {
     return res.status(400).json({ error: 'Ticker and prediction date are required.' });
@@ -421,6 +421,19 @@ app.post('/predict', (req, res) => {
       // Get only the last line which is JSON
       const lines = stdout.trim().split('\n');
       const responseJson = JSON.parse(lines[lines.length - 1]); // Last line assumed to be JSON
+      
+      // Save prediction to user's profile if userEmail is provided
+      if (userEmail) {
+        savePredictionToUser(userEmail, {
+          ticker,
+          predictionDate,
+          predictedPrice: responseJson.predicted_price,
+          accuracy: responseJson.accuracy,
+          graphPath: responseJson.graph_path,
+          result: 'pending'
+        });
+      }
+      
       res.json(responseJson);
     } catch (parseError) {
       console.error('Error parsing Python script output:', parseError);
@@ -607,13 +620,23 @@ app.get('/api/user/activity/:email', async (req, res) => {
   const { email } = req.params;
   
   try {
-    // Mock activity data
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    const totalPredictions = user.predictions.length;
+    const successfulPredictions = user.predictions.filter(p => p.result === 'success').length;
+    const avgAccuracy = totalPredictions > 0 
+      ? user.predictions.reduce((sum, p) => sum + (p.accuracy || 0), 0) / totalPredictions 
+      : 0;
+    
     const activity = {
-      totalPredictions: 15,
-      successfulPredictions: 12,
-      newsSearches: 45,
-      watchlistItems: 8,
-      avgAccuracy: 79.8,
+      totalPredictions,
+      successfulPredictions,
+      newsSearches: 45, // This could be tracked separately
+      watchlistItems: user.watchlist.length,
+      avgAccuracy: Math.round(avgAccuracy * 100) / 100,
       lastActive: new Date(),
       portfolioPerformance: [
         { date: '2024-01-01', value: 1000 },
@@ -628,6 +651,39 @@ app.get('/api/user/activity/:email', async (req, res) => {
     res.json(activity);
   } catch (error) {
     console.error('Error fetching activity:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Helper function to save prediction to user
+async function savePredictionToUser(email, predictionData) {
+  try {
+    const user = await User.findOne({ email });
+    if (user) {
+      user.predictions.push(predictionData);
+      await user.save();
+    }
+  } catch (error) {
+    console.error('Error saving prediction to user:', error);
+  }
+}
+
+// Get User Predictions
+app.get('/api/user/predictions/:email', async (req, res) => {
+  const { email } = req.params;
+  
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Sort predictions by creation date (newest first)
+    const predictions = user.predictions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    
+    res.json({ predictions });
+  } catch (error) {
+    console.error('Error fetching predictions:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

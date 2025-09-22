@@ -21,6 +21,7 @@ const Login = () => {
       if (response.data.token) {
         // Store the token in localStorage
         localStorage.setItem('authToken', response.data.token);
+        localStorage.setItem('userEmail', email);
         navigate('/Home'); // Redirect to Home after login
       } else {
         setError('Invalid credentials');

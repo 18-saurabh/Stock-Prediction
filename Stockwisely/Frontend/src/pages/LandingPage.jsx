@@ -20,6 +20,7 @@ const LandingPage = () => {
       const response = await axios.post("http://localhost:5000/login", { email, password });
       if (response.data.token) {
         localStorage.setItem("authToken", response.data.token);
+        localStorage.setItem("userEmail", email);
         navigate("/home");
       } else {
         setError("Invalid credentials");
@@ -38,6 +39,7 @@ const LandingPage = () => {
     try {
       const response = await axios.post("http://localhost:5000/signup", { username, email, password });
       if (response.status === 201) {
+        localStorage.setItem("userEmail", email);
         alert("Signup successful! Redirecting to the home page...");
         navigate("/home");
       } else {

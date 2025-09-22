@@ -50,7 +50,7 @@ const Profile = () => {
   }, []);
 
   const fetchUserData = async () => {
-    const email = localStorage.getItem("email") || "user@example.com";
+    const email = localStorage.getItem("userEmail") || "user@example.com";
     
     try {
       setLoading(true);
@@ -318,46 +318,102 @@ const Profile = () => {
 
         {activeTab === 'predictions' && (
           <div className="bg-white rounded-xl shadow-lg p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">Prediction History</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4">Ticker</th>
-                    <th className="text-left py-3 px-4">Prediction Date</th>
-                    <th className="text-left py-3 px-4">Predicted Price</th>
-                    <th className="text-left py-3 px-4">Actual Price</th>
-                    <th className="text-left py-3 px-4">Accuracy</th>
-                    <th className="text-left py-3 px-4">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {predictions.map((prediction) => (
-                    <tr key={prediction.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium">{prediction.ticker}</td>
-                      <td className="py-3 px-4">{new Date(prediction.predictionDate).toLocaleDateString()}</td>
-                      <td className="py-3 px-4">${prediction.predictedPrice}</td>
-                      <td className="py-3 px-4">${prediction.actualPrice}</td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
+            <h3 className="text-xl font-bold text-gray-900 mb-6">My Predictions</h3>
+            {predictions && predictions.length > 0 ? (
+              <div className="space-y-4">
+                {predictions.map((prediction, index) => (
+                  <div key={index} className="bg-gray-50 rounded-lg p-6 border border-gray-200 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
+                          <TrendingUp className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                          <h4 className="text-lg font-bold text-gray-900">{prediction.ticker}</h4>
+                          <p className="text-sm text-gray-500">
+                            {new Date(prediction.createdAt).toLocaleDateString()} at {new Date(prediction.createdAt).toLocaleTimeString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-orange-500">
+                          ${prediction.predictedPrice?.toFixed(2)}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          for {new Date(prediction.predictionDate).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                           prediction.accuracy > 80 ? 'bg-green-100 text-green-800' :
                           prediction.accuracy > 60 ? 'bg-yellow-100 text-yellow-800' :
                           'bg-red-100 text-red-800'
                         }`}>
-                          {prediction.accuracy}%
+                          {prediction.accuracy ? `${(100 - prediction.accuracy).toFixed(1)}% Accuracy` : 'Calculating...'}
                         </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        {prediction.success ? (
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                        ) : (
-                          <XCircle className="h-5 w-5 text-red-500" />
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          prediction.result === 'success' ? 'bg-green-100 text-green-800' :
+                          prediction.result === 'failed' ? 'bg-red-100 text-red-800' :
+                          'bg-blue-100 text-blue-800'
+                        }`}>
+                          {prediction.result === 'success' ? 'Success' :
+                           prediction.result === 'failed' ? 'Failed' : 'Pending'}
+                        </span>
+                      </div>
+                      
+                      {prediction.graphPath && (
+                        <button
+                          onClick={() => window.open(`http://localhost:5000/${prediction.graphPath}`, '_blank')}
+                          className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
+                        >
+                          View Chart
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <TrendingUp className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500 text-lg">No predictions yet</p>
+                <p className="text-gray-400 text-sm mt-2">Make your first stock prediction to see it here</p>
+                <button
+                  onClick={() => navigate('/home')}
+                  className="mt-4 px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                >
+                  Make a Prediction
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'predictions' && predictions && predictions.length > 0 && (
+          <div className="bg-white rounded-xl shadow-lg p-6 mt-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-6">Prediction Statistics</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-orange-500">{predictions.length}</div>
+                <div className="text-gray-600">Total Predictions</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-green-500">
+                  {predictions.filter(p => p.result === 'success').length}
+                </div>
+                <div className="text-gray-600">Successful</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-blue-500">
+                  {predictions.length > 0 ? 
+                    Math.round((predictions.reduce((sum, p) => sum + (100 - (p.accuracy || 0)), 0) / predictions.length) * 100) / 100 
+                    : 0}%
+                </div>
+                <div className="text-gray-600">Avg Accuracy</div>
+              </div>
             </div>
           </div>
         )}

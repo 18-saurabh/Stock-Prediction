@@ -23,6 +23,17 @@ const userSchema = new mongoose.Schema({
       dates: [String],
     },
   ],
+  predictions: [
+    {
+      ticker: String,
+      predictionDate: String,
+      predictedPrice: Number,
+      accuracy: Number,
+      graphPath: String,
+      createdAt: { type: Date, default: Date.now },
+      result: String // 'pending', 'success', 'failed'
+    }
+  ],
   preferences: {
     darkMode: { type: Boolean, default: false },
     notifications: { type: Boolean, default: true }

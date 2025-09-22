@@ -35,10 +35,12 @@ const Predicted = () => {
   }, []);
 
   useEffect(() => {
+    const userEmail = localStorage.getItem('userEmail') || 'user@example.com';
+    
     fetch('http://localhost:5000/predict', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ticker, predictionDate: futureDate }),
+      body: JSON.stringify({ ticker, predictionDate: futureDate, userEmail }),
     })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
