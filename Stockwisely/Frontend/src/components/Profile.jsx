@@ -185,7 +185,7 @@ const Profile = () => {
             </div>
           </div>
           
-          <div className="flex space-x-3">
+          {/* <div className="flex space-x-3">
             <button
               onClick={() => setEditMode(!editMode)}
               className="flex items-center px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
@@ -200,15 +200,15 @@ const Profile = () => {
               <Download className="h-4 w-4 mr-2" />
               Export Data
             </button>
-          </div>
+          </div> */}
         </div>
 
         {/* Tabs */}
         <div className="flex space-x-1 mb-8 bg-white rounded-lg p-1 shadow-sm">
           {[
             { id: 'overview', label: 'Overview', icon: User },
-            { id: 'predictions', label: 'Predictions', icon: TrendingUp },
-            { id: 'watchlist', label: 'Watchlist', icon: Star },
+            // { id: 'predictions', label: 'Predictions', icon: TrendingUp },
+            // { id: 'watchlist', label: 'Watchlist', icon: Star },
             { id: 'settings', label: 'Settings', icon: Settings }
           ].map((tab) => (
             <button
@@ -260,7 +260,7 @@ const Profile = () => {
             </div>
 
             {/* Activity Stats */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
+            {/* <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-xl font-bold text-gray-900 mb-4">Activity Stats</h3>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
@@ -282,10 +282,10 @@ const Profile = () => {
                   <span className="font-bold text-purple-500">{activity?.avgAccuracy}%</span>
                 </div>
               </div>
-            </div>
+            </div> */}
 
             {/* Portfolio Performance */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
+            {/* <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-xl font-bold text-gray-900 mb-4">Portfolio Performance</h3>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
@@ -312,11 +312,11 @@ const Profile = () => {
                   ${activity?.portfolioPerformance?.[activity.portfolioPerformance.length - 1]?.value || 0}
                 </p>
               </div>
-            </div>
+            </div> */}
           </div>
         )}
 
-        {activeTab === 'predictions' && (
+        {/* {activeTab === 'predictions' && (
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h3 className="text-xl font-bold text-gray-900 mb-6">My Predictions</h3>
             {predictions && predictions.length > 0 ? (
@@ -390,9 +390,9 @@ const Profile = () => {
               </div>
             )}
           </div>
-        )}
+        )} */}
 
-        {activeTab === 'predictions' && predictions && predictions.length > 0 && (
+        {/* {activeTab === 'predictions' && predictions && predictions.length > 0 && (
           <div className="bg-white rounded-xl shadow-lg p-6 mt-6">
             <h3 className="text-xl font-bold text-gray-900 mb-6">Prediction Statistics</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -416,9 +416,9 @@ const Profile = () => {
               </div>
             </div>
           </div>
-        )}
+        )} */}
 
-        {activeTab === 'watchlist' && (
+        {/* {activeTab === 'watchlist' && (
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900">Your Watchlist</h3>
@@ -463,7 +463,7 @@ const Profile = () => {
               </div>
             )}
           </div>
-        )}
+        )} */}
 
         {activeTab === 'settings' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -553,7 +553,7 @@ const Profile = () => {
             </div>
 
             {/* Preferences */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
+            {/* <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-xl font-bold text-gray-900 mb-6">Preferences</h3>
               
               <div className="space-y-6">
@@ -601,7 +601,7 @@ const Profile = () => {
                   </button>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         )}
       </div>
